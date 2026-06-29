@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>em tee vee</title>
+  <meta name="theme-color" content="#ff3366">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+  <link rel="icon" href="/static/icons/favicon-64.png">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div id="app">
+    <div id="player-container">
+      <video id="player" autoplay playsinline></video>
+      <div id="overlay">
+        <div id="now-playing">
+          <span id="song-title"></span>
+          <span id="song-artist"></span>
+        </div>
+        <div id="controls">
+          <button id="btn-prev" title="Previous">&#9664;&#9664;</button>
+          <button id="btn-play" title="Play/Pause">&#9654;</button>
+          <button id="btn-next" title="Next">&#9654;&#9654;</button>
+          <button id="btn-shuffle" title="Reshuffle">&#8645;</button>
+          <button id="btn-fullscreen" title="Fullscreen">&#9974;</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="sidebar">
+      <div id="sidebar-header">
+        <div class="header-titles">
+          <h1>em tee vee</h1>
+          <span id="profile-label"></span>
+        </div>
+        <div id="sidebar-actions">
+          <a href="/" class="nav-link" title="Switch profile">Profiles</a>
+          <a href="/library" id="library-link" class="nav-link">Library</a>
+        </div>
+      </div>
+      <ul id="playlist"></ul>
+    </div>
+  </div>
+
+  <script src="/static/pwa.js"></script>
+  <script src="/static/player.js"></script>
+</body>
+</html>

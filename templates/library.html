@@ -2,16 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>em tee vee - library</title>
+  <meta name="theme-color" content="#ff3366">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+  <link rel="icon" href="/static/icons/favicon-64.png">
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="/static/library.css">
 </head>
 <body class="library-page">
   <header id="lib-header">
-    <a href="/" class="nav-link">Player</a>
+    <a href="/" class="nav-link">Profiles</a>
+    <a href="/player" id="player-link" class="nav-link">Player</a>
     <h1>em tee vee <span>library</span></h1>
-    <button id="btn-sync" title="Sync from Spotify">Sync</button>
+    <select id="profile-select" title="Show songs for"></select>
+    <button id="btn-sync" title="Sync liked songs from Spotify">Sync</button>
   </header>
 
   <div id="sync-status" class="hidden">
@@ -36,6 +44,7 @@
           <th class="col-title">Title</th>
           <th class="col-artist">Artist</th>
           <th class="col-album">Album</th>
+          <th class="col-likedby">Liked by</th>
           <th class="col-video">Video</th>
           <th class="col-actions"></th>
         </tr>
@@ -64,6 +73,7 @@
     </div>
   </div>
 
+  <script src="/static/pwa.js"></script>
   <script src="/static/library.js"></script>
 </body>
 </html>

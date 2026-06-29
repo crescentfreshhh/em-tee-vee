@@ -7,14 +7,19 @@
   const btnNext = document.getElementById("btn-next");
   const btnPrev = document.getElementById("btn-prev");
   const btnShuffle = document.getElementById("btn-shuffle");
-  const btnSync = document.getElementById("btn-sync");
-  const syncStatus = document.getElementById("sync-status");
-  const syncText = document.getElementById("sync-text");
-  const syncFill = document.getElementById("sync-progress-fill");
+  const btnFullscreen = document.getElementById("btn-fullscreen");
+  const profileLabel = document.getElementById("profile-label");
+  const libraryLink = document.getElementById("library-link");
+  const playerContainer = document.getElementById("player-container");
+
+  const params = new URLSearchParams(location.search);
+  const profile = params.get("profile") || "all";
+
+  // Carry the selected profile through to the library page.
+  libraryLink.href = `/library?profile=${encodeURIComponent(profile)}`;
 
   let queue = [];
   let currentIndex = -1;
-  let syncPollTimer = null;
 
   function shuffle(arr) {
     const a = [...arr];
@@ -25,14 +30,25 @@
     return a;
   }
 
+  async function loadProfileLabel() {
+    if (profile === "all") { profileLabel.textContent = "Everyone"; return; }
+    try {
+      const res = await fetch("/api/profiles");
+      const profiles = await res.json();
+      const p = profiles.find((x) => x.id === profile);
+      if (p) {
+        profileLabel.textContent = p.name;
+        profileLabel.style.color = p.color;
+      }
+    } catch (e) { /* non-fatal */ }
+  }
+
   async function loadVideos() {
-    const res = await fetch("/api/videos");
+    const res = await fetch(`/api/videos?profile=${encodeURIComponent(profile)}`);
     const videos = await res.json();
     queue = shuffle(videos);
     renderPlaylist();
-    if (queue.length > 0 && currentIndex === -1) {
-      playIndex(0);
-    }
+    if (queue.length > 0 && currentIndex === -1) playIndex(0);
   }
 
   function renderPlaylist() {
@@ -56,41 +72,27 @@
     artistEl.textContent = v.artist;
     btnPlay.innerHTML = "&#10074;&#10074;";
     renderPlaylist();
-
     const activeLi = playlistEl.querySelector("li.active");
     if (activeLi) activeLi.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 
-  player.addEventListener("ended", () => {
-    if (currentIndex < queue.length - 1) {
-      playIndex(currentIndex + 1);
-    } else {
-      queue = shuffle(queue);
-      playIndex(0);
-    }
-  });
-
-  btnPlay.addEventListener("click", () => {
-    if (player.paused) {
-      player.play();
-      btnPlay.innerHTML = "&#10074;&#10074;";
-    } else {
-      player.pause();
-      btnPlay.innerHTML = "&#9654;";
-    }
-  });
-
-  btnNext.addEventListener("click", () => {
+  function advance() {
     if (currentIndex < queue.length - 1) playIndex(currentIndex + 1);
     else { queue = shuffle(queue); playIndex(0); }
+  }
+
+  player.addEventListener("ended", advance);
+
+  btnPlay.addEventListener("click", () => {
+    if (player.paused) { player.play(); btnPlay.innerHTML = "&#10074;&#10074;"; }
+    else { player.pause(); btnPlay.innerHTML = "&#9654;"; }
   });
 
+  btnNext.addEventListener("click", advance);
+
   btnPrev.addEventListener("click", () => {
-    if (player.currentTime > 5) {
-      player.currentTime = 0;
-    } else if (currentIndex > 0) {
-      playIndex(currentIndex - 1);
-    }
+    if (player.currentTime > 5) player.currentTime = 0;
+    else if (currentIndex > 0) playIndex(currentIndex - 1);
   });
 
   btnShuffle.addEventListener("click", () => {
@@ -100,47 +102,17 @@
     renderPlaylist();
   });
 
-  btnSync.addEventListener("click", async () => {
-    btnSync.disabled = true;
-    syncStatus.classList.remove("hidden");
-    syncText.textContent = "Starting sync...";
-    syncFill.style.width = "0%";
-
-    try {
-      await fetch("/api/sync", { method: "POST" });
-      pollSync();
-    } catch (e) {
-      syncText.textContent = "Sync failed: " + e.message;
-      btnSync.disabled = false;
-    }
+  btnFullscreen.addEventListener("click", () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else playerContainer.requestFullscreen && playerContainer.requestFullscreen();
   });
 
-  function pollSync() {
-    syncPollTimer = setInterval(async () => {
-      const res = await fetch("/api/sync/status");
-      const s = await res.json();
-
-      if (s.total > 0) {
-        const pct = Math.round((s.current / s.total) * 100);
-        syncFill.style.width = pct + "%";
-        syncText.textContent = s.current_song
-          ? `Downloading ${s.current}/${s.total}: ${s.current_song}`
-          : `${s.current}/${s.total} complete`;
-      }
-
-      if (!s.running) {
-        clearInterval(syncPollTimer);
-        btnSync.disabled = false;
-        if (s.errors.length > 0) {
-          syncText.textContent = `Done with ${s.errors.length} error(s)`;
-        } else {
-          syncText.textContent = "Sync complete!";
-          setTimeout(() => syncStatus.classList.add("hidden"), 3000);
-        }
-        loadVideos();
-      }
-    }, 2000);
-  }
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "Space") { e.preventDefault(); btnPlay.click(); }
+    if (e.code === "ArrowRight") btnNext.click();
+    if (e.code === "ArrowLeft") btnPrev.click();
+    if (e.key === "f") btnFullscreen.click();
+  });
 
   function esc(s) {
     const d = document.createElement("div");
@@ -148,11 +120,6 @@
     return d.innerHTML;
   }
 
-  document.addEventListener("keydown", (e) => {
-    if (e.code === "Space") { e.preventDefault(); btnPlay.click(); }
-    if (e.code === "ArrowRight") btnNext.click();
-    if (e.code === "ArrowLeft") btnPrev.click();
-  });
-
+  loadProfileLabel();
   loadVideos();
 })();

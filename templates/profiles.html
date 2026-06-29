@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>em tee vee</title>
+  <meta name="theme-color" content="#ff3366">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+  <link rel="icon" href="/static/icons/favicon-64.png">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/profiles.css">
+</head>
+<body class="profiles-page">
+  <div id="profiles-wrap">
+    <h1 class="brand">em tee vee</h1>
+    <p class="tagline">Who's watching?</p>
+
+    <div id="profiles-grid"></div>
+
+    <div id="profile-empty" class="hidden">
+      <p>No profiles yet. Add the first family member to get started.</p>
+    </div>
+  </div>
+
+  <!-- Add / create profile modal -->
+  <div id="add-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add Profile</h2>
+        <button class="modal-close" data-close>&times;</button>
+      </div>
+      <div class="modal-body">
+        <label for="profile-name">Name (e.g. Mom, Dad, Ezra)</label>
+        <input type="text" id="profile-name" maxlength="24" placeholder="Name" autocomplete="off">
+        <div id="add-error" class="hidden"></div>
+        <p class="hint">After creating the profile, connect their Spotify to pull in their liked songs.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" data-close>Cancel</button>
+        <button id="add-submit" class="btn-primary">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/pwa.js"></script>
+  <script src="/static/profiles.js"></script>
+</body>
+</html>

@@ -108,6 +108,18 @@ body {
   color: #ff3366;
 }
 
+.header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#profile-label {
+  font-size: 0.8em;
+  font-weight: 600;
+  color: #888;
+}
+
 #sidebar-actions {
   display: flex;
   align-items: center;
@@ -199,7 +211,7 @@ body {
 }
 
 #playlist:empty::after {
-  content: "No videos yet. Hit Sync to get started.";
+  content: "No videos for this profile yet. Sync from the Library or Profiles page.";
   display: block;
   padding: 40px 20px;
   text-align: center;

@@ -40,23 +40,49 @@ def song_key(song):
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
-def save_songs(songs):
+def save_songs(songs, profile_id):
+    """Add songs to the shared catalog and tag them as liked by `profile_id`.
+
+    Videos are deduplicated by song key, so a track liked by several family
+    members is only ever downloaded once; membership is tracked per song.
+    """
     songs_db = load_songs_db()
     for s in songs:
         key = song_key(s)
         if key not in songs_db:
-            songs_db[key] = s
+            songs_db[key] = dict(s)
+            songs_db[key]["profiles"] = []
+        members = songs_db[key].setdefault("profiles", [])
+        if profile_id not in members:
+            members.append(profile_id)
     save_songs_db(songs_db)
     return songs_db
 
 
-def get_library():
+def remove_profile_memberships(profile_id):
+    songs_db = load_songs_db()
+    for song in songs_db.values():
+        if profile_id in song.get("profiles", []):
+            song["profiles"].remove(profile_id)
+    save_songs_db(songs_db)
+
+
+def _matches_profile(song, profile_id):
+    if not profile_id or profile_id == "all":
+        return True
+    return profile_id in song.get("profiles", [])
+
+
+def get_library(profile_id=None):
     songs_db = load_songs_db()
     metadata = _load_metadata()
     library = []
     for key, song in songs_db.items():
+        if not _matches_profile(song, profile_id):
+            continue
         entry = dict(song)
         entry["key"] = key
+        entry["profiles"] = song.get("profiles", [])
         if key in metadata:
             vid = metadata[key]
             filepath = os.path.join(config.DOWNLOAD_DIR, vid["file"])
@@ -168,10 +194,14 @@ def download_video(song):
     return _record_video(song, key, filepath, video_title or query, video_url)
 
 
-def get_downloaded_videos():
+def get_downloaded_videos(profile_id=None):
     metadata = _load_metadata()
+    songs_db = load_songs_db()
     available = []
     for key, entry in metadata.items():
+        song = songs_db.get(key, {})
+        if not _matches_profile(song, profile_id):
+            continue
         filepath = os.path.join(config.DOWNLOAD_DIR, entry["file"])
         if os.path.exists(filepath):
             available.append(entry)
