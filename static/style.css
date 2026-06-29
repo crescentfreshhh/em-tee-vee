@@ -1,0 +1,185 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0a0a0a;
+  color: #e0e0e0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#app {
+  display: flex;
+  height: 100vh;
+}
+
+#player-container {
+  flex: 1;
+  position: relative;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#player {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+#overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.85));
+  padding: 40px 30px 20px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#player-container:hover #overlay {
+  opacity: 1;
+}
+
+#now-playing {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+#song-title {
+  font-size: 1.4em;
+  font-weight: 700;
+  color: #fff;
+}
+
+#song-artist {
+  font-size: 1em;
+  color: #aaa;
+  margin-top: 2px;
+}
+
+#controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+#controls button {
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: #fff;
+  font-size: 1.2em;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#controls button:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+#sidebar {
+  width: 340px;
+  background: #111;
+  border-left: 1px solid #222;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #222;
+}
+
+#sidebar-header h1 {
+  font-size: 1.3em;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #ff3366;
+}
+
+#btn-sync {
+  background: #ff3366;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85em;
+  transition: background 0.2s;
+}
+
+#btn-sync:hover { background: #e6295a; }
+#btn-sync:disabled { background: #555; cursor: not-allowed; }
+
+#sync-status {
+  padding: 10px 20px;
+  border-bottom: 1px solid #222;
+  font-size: 0.8em;
+  color: #aaa;
+}
+
+#sync-status.hidden { display: none; }
+
+#sync-progress-bar {
+  height: 4px;
+  background: #222;
+  border-radius: 2px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+
+#sync-progress-fill {
+  height: 100%;
+  background: #ff3366;
+  width: 0%;
+  transition: width 0.3s;
+}
+
+#playlist {
+  list-style: none;
+  overflow-y: auto;
+  flex: 1;
+}
+
+#playlist li {
+  padding: 12px 20px;
+  border-bottom: 1px solid #1a1a1a;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#playlist li:hover { background: #1a1a1a; }
+#playlist li.active { background: #1f1020; border-left: 3px solid #ff3366; }
+
+#playlist li .pl-title {
+  font-size: 0.95em;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+#playlist li .pl-artist {
+  font-size: 0.8em;
+  color: #777;
+  margin-top: 2px;
+}
+
+#playlist:empty::after {
+  content: "No videos yet. Hit Sync to get started.";
+  display: block;
+  padding: 40px 20px;
+  text-align: center;
+  color: #555;
+  font-size: 0.9em;
+}

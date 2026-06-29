@@ -1,0 +1,119 @@
+import json
+import os
+import subprocess
+import hashlib
+import config
+
+
+METADATA_FILE = os.path.join(config.DOWNLOAD_DIR, "metadata.json")
+
+
+def _load_metadata():
+    if os.path.exists(METADATA_FILE):
+        with open(METADATA_FILE) as f:
+            return json.load(f)
+    return {}
+
+
+def _save_metadata(metadata):
+    os.makedirs(config.DOWNLOAD_DIR, exist_ok=True)
+    with open(METADATA_FILE, "w") as f:
+        json.dump(metadata, f, indent=2)
+
+
+def _song_key(song):
+    raw = f"{song['artist']} - {song['title']}".lower()
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+
+def _find_video_file(key):
+    for fname in os.listdir(config.DOWNLOAD_DIR):
+        if fname.startswith(key) and not fname.endswith(".json"):
+            return os.path.join(config.DOWNLOAD_DIR, fname)
+    return None
+
+
+def download_video(song):
+    os.makedirs(config.DOWNLOAD_DIR, exist_ok=True)
+    metadata = _load_metadata()
+    key = _song_key(song)
+
+    if key in metadata and _find_video_file(key):
+        return metadata[key]
+
+    query = f"{song['artist']} {song['title']} official music video"
+    output_template = os.path.join(config.DOWNLOAD_DIR, f"{key}.%(ext)s")
+
+    cmd = [
+        "yt-dlp",
+        f"ytsearch1:{query}",
+        "--format", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best",
+        "--merge-output-format", "mp4",
+        "--output", output_template,
+        "--no-playlist",
+        "--write-thumbnail",
+        "--convert-thumbnails", "jpg",
+        "--embed-thumbnail",
+        "--print", "after_move:filepath",
+        "--print", "title",
+        "--print", "webpage_url",
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    if result.returncode != 0:
+        raise RuntimeError(f"yt-dlp failed for '{query}': {result.stderr}")
+
+    lines = result.stdout.strip().split("\n")
+    filepath = lines[-3] if len(lines) >= 3 else None
+    video_title = lines[-2] if len(lines) >= 2 else query
+    video_url = lines[-1] if lines else ""
+
+    if not filepath or not os.path.exists(filepath):
+        for f in os.listdir(config.DOWNLOAD_DIR):
+            if f.startswith(key) and f.endswith(".mp4"):
+                filepath = os.path.join(config.DOWNLOAD_DIR, f)
+                break
+
+    if not filepath or not os.path.exists(filepath):
+        raise RuntimeError(f"Download completed but file not found for '{query}'")
+
+    entry = {
+        "key": key,
+        "file": os.path.basename(filepath),
+        "title": song["title"],
+        "artist": song["artist"],
+        "album": song["album"],
+        "video_title": video_title,
+        "source_url": video_url,
+        "spotify_id": song.get("spotify_id", ""),
+    }
+
+    metadata[key] = entry
+    _save_metadata(metadata)
+    return entry
+
+
+def get_downloaded_videos():
+    metadata = _load_metadata()
+    available = []
+    for key, entry in metadata.items():
+        filepath = os.path.join(config.DOWNLOAD_DIR, entry["file"])
+        if os.path.exists(filepath):
+            available.append(entry)
+    return available
+
+
+def download_all(songs, progress_callback=None):
+    results = {"success": [], "failed": []}
+    for i, song in enumerate(songs):
+        try:
+            entry = download_video(song)
+            results["success"].append(entry)
+        except Exception as e:
+            results["failed"].append({
+                "song": song,
+                "error": str(e),
+            })
+        if progress_callback:
+            progress_callback(i + 1, len(songs), song)
+    return results
