@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>em tee vee - library</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/library.css">
+</head>
+<body class="library-page">
+  <header id="lib-header">
+    <a href="/" class="nav-link">Player</a>
+    <h1>em tee vee <span>library</span></h1>
+    <button id="btn-sync" title="Sync from Spotify">Sync</button>
+  </header>
+
+  <div id="sync-status" class="hidden">
+    <div id="sync-progress-bar"><div id="sync-progress-fill"></div></div>
+    <span id="sync-text"></span>
+  </div>
+
+  <div id="lib-toolbar">
+    <input type="text" id="search" placeholder="Search songs..." autocomplete="off">
+    <div id="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="downloaded">Downloaded</button>
+      <button class="filter-btn" data-filter="none">Missing</button>
+    </div>
+  </div>
+
+  <div id="lib-table-wrap">
+    <table id="lib-table">
+      <thead>
+        <tr>
+          <th class="col-status"></th>
+          <th class="col-title">Title</th>
+          <th class="col-artist">Artist</th>
+          <th class="col-album">Album</th>
+          <th class="col-video">Video</th>
+          <th class="col-actions"></th>
+        </tr>
+      </thead>
+      <tbody id="lib-body"></tbody>
+    </table>
+    <div id="lib-empty" class="hidden">No songs found. Hit Sync to pull your liked songs from Spotify.</div>
+  </div>
+
+  <div id="match-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Match Video</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="match-song-info"></p>
+        <label for="match-url">Video URL (YouTube, Vimeo, Dailymotion, etc.)</label>
+        <input type="url" id="match-url" placeholder="https://www.youtube.com/watch?v=...">
+        <div id="match-error" class="hidden"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="match-cancel" class="btn-secondary">Cancel</button>
+        <button id="match-submit" class="btn-primary">Download &amp; Match</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/library.js"></script>
+</body>
+</html>

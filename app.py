@@ -22,10 +22,39 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/library")
+def library():
+    return render_template("library.html")
+
+
 @app.route("/api/videos")
 def api_videos():
     videos = downloader.get_downloaded_videos()
     return jsonify(videos)
+
+
+@app.route("/api/library")
+def api_library():
+    return jsonify(downloader.get_library())
+
+
+@app.route("/api/match", methods=["POST"])
+def api_match():
+    data = request.get_json()
+    if not data or "key" not in data or "url" not in data:
+        return jsonify({"error": "key and url are required"}), 400
+
+    songs_db = downloader.load_songs_db()
+    if data["key"] not in songs_db:
+        return jsonify({"error": "Song not found"}), 404
+
+    song = songs_db[data["key"]]
+
+    try:
+        entry = downloader.download_from_url(song, data["url"])
+        return jsonify(entry)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/videos/<path:filename>")
@@ -56,6 +85,7 @@ def _run_sync(limit=None):
 
     try:
         songs = spotify_client.fetch_liked_songs(limit=limit)
+        downloader.save_songs(songs)
         sync_status["total"] = len(songs)
 
         def on_progress(current, total, song):
