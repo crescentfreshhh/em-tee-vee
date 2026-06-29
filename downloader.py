@@ -75,58 +75,64 @@ def get_library():
 
 def _find_video_file(key):
     for fname in os.listdir(config.DOWNLOAD_DIR):
-        if fname.startswith(key) and not fname.endswith(".json"):
+        if fname.startswith(key) and fname.endswith(".mp4"):
             return os.path.join(config.DOWNLOAD_DIR, fname)
     return None
 
 
-def download_from_url(song, url):
-    os.makedirs(config.DOWNLOAD_DIR, exist_ok=True)
-    metadata = _load_metadata()
-    key = song_key(song)
+# Field separator used to emit filepath/title/url in a single yt-dlp --print.
+# Emitting them together at the after_move stage avoids relying on the order in
+# which yt-dlp prints fields from different stages (default "video" vs
+# "after_move"), which is not the order they appear on the command line.
+_PRINT_SEP = "\x1f"
 
-    old_file = None
-    if key in metadata:
-        old_file = os.path.join(config.DOWNLOAD_DIR, metadata[key]["file"])
 
+def _run_ytdlp(source, key):
     output_template = os.path.join(config.DOWNLOAD_DIR, f"{key}.%(ext)s")
+    print_template = (
+        f"after_move:%(filepath)s{_PRINT_SEP}%(title)s{_PRINT_SEP}%(webpage_url)s"
+    )
 
     cmd = [
         "yt-dlp",
-        url,
+        source,
+        "--quiet",
+        "--no-warnings",
         "--format", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best",
         "--merge-output-format", "mp4",
         "--output", output_template,
         "--no-playlist",
+        # Re-matching a song reuses the same {key}.mp4 path; without this yt-dlp
+        # would see the existing file and skip the new download entirely.
+        "--force-overwrites",
         "--write-thumbnail",
         "--convert-thumbnails", "jpg",
         "--embed-thumbnail",
-        "--print", "after_move:filepath",
-        "--print", "title",
-        "--print", "webpage_url",
+        "--print", print_template,
     ]
 
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
     if result.returncode != 0:
-        raise RuntimeError(f"yt-dlp failed for '{url}': {result.stderr}")
+        raise RuntimeError(f"yt-dlp failed for '{source}': {result.stderr.strip()}")
 
-    lines = result.stdout.strip().split("\n")
-    filepath = lines[-3] if len(lines) >= 3 else None
-    video_title = lines[-2] if len(lines) >= 2 else ""
-    video_url = lines[-1] if lines else url
-
-    if not filepath or not os.path.exists(filepath):
-        for f in os.listdir(config.DOWNLOAD_DIR):
-            if f.startswith(key) and f.endswith(".mp4"):
-                filepath = os.path.join(config.DOWNLOAD_DIR, f)
-                break
+    filepath = video_title = video_url = None
+    for line in result.stdout.splitlines():
+        if _PRINT_SEP in line:
+            parts = line.split(_PRINT_SEP)
+            if len(parts) == 3:
+                filepath, video_title, video_url = parts
 
     if not filepath or not os.path.exists(filepath):
-        raise RuntimeError(f"Download completed but file not found for '{url}'")
+        filepath = _find_video_file(key)
 
-    if old_file and os.path.exists(old_file) and os.path.abspath(old_file) != os.path.abspath(filepath):
-        os.remove(old_file)
+    if not filepath or not os.path.exists(filepath):
+        raise RuntimeError(f"Download completed but output file not found for '{source}'")
 
+    return filepath, (video_title or ""), (video_url or "")
+
+
+def _record_video(song, key, filepath, video_title, video_url):
+    metadata = _load_metadata()
     entry = {
         "key": key,
         "file": os.path.basename(filepath),
@@ -137,10 +143,16 @@ def download_from_url(song, url):
         "source_url": video_url,
         "spotify_id": song.get("spotify_id", ""),
     }
-
     metadata[key] = entry
     _save_metadata(metadata)
     return entry
+
+
+def download_from_url(song, url):
+    os.makedirs(config.DOWNLOAD_DIR, exist_ok=True)
+    key = song_key(song)
+    filepath, video_title, video_url = _run_ytdlp(url, key)
+    return _record_video(song, key, filepath, video_title, video_url or url)
 
 
 def download_video(song):
@@ -152,55 +164,8 @@ def download_video(song):
         return metadata[key]
 
     query = f"{song['artist']} {song['title']} official music video"
-    output_template = os.path.join(config.DOWNLOAD_DIR, f"{key}.%(ext)s")
-
-    cmd = [
-        "yt-dlp",
-        f"ytsearch1:{query}",
-        "--format", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best",
-        "--merge-output-format", "mp4",
-        "--output", output_template,
-        "--no-playlist",
-        "--write-thumbnail",
-        "--convert-thumbnails", "jpg",
-        "--embed-thumbnail",
-        "--print", "after_move:filepath",
-        "--print", "title",
-        "--print", "webpage_url",
-    ]
-
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-    if result.returncode != 0:
-        raise RuntimeError(f"yt-dlp failed for '{query}': {result.stderr}")
-
-    lines = result.stdout.strip().split("\n")
-    filepath = lines[-3] if len(lines) >= 3 else None
-    video_title = lines[-2] if len(lines) >= 2 else query
-    video_url = lines[-1] if lines else ""
-
-    if not filepath or not os.path.exists(filepath):
-        for f in os.listdir(config.DOWNLOAD_DIR):
-            if f.startswith(key) and f.endswith(".mp4"):
-                filepath = os.path.join(config.DOWNLOAD_DIR, f)
-                break
-
-    if not filepath or not os.path.exists(filepath):
-        raise RuntimeError(f"Download completed but file not found for '{query}'")
-
-    entry = {
-        "key": key,
-        "file": os.path.basename(filepath),
-        "title": song["title"],
-        "artist": song["artist"],
-        "album": song["album"],
-        "video_title": video_title,
-        "source_url": video_url,
-        "spotify_id": song.get("spotify_id", ""),
-    }
-
-    metadata[key] = entry
-    _save_metadata(metadata)
-    return entry
+    filepath, video_title, video_url = _run_ytdlp(f"ytsearch1:{query}", key)
+    return _record_video(song, key, filepath, video_title or query, video_url)
 
 
 def get_downloaded_videos():
