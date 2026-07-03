@@ -39,7 +39,7 @@
 
       const c = card({
         avatarStyle: `background:${p.color}`,
-        avatarText: initials(p.name),
+        avatarText: esc(initials(p.name)),
         name: esc(p.name),
         meta: meta,
         onClick: () => {

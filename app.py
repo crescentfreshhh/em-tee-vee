@@ -1,4 +1,5 @@
 import os
+import html
 import threading
 from flask import (
     Flask, render_template, jsonify, send_from_directory, request,
@@ -11,6 +12,10 @@ import spotify_client
 
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
+
+# Extensions the /videos route is allowed to serve. Videos are always merged to
+# mp4; the others are permitted defensively in case the format policy changes.
+VIDEO_EXTS = (".mp4", ".webm", ".m4v", ".mkv")
 
 sync_status = {
     "running": False,
@@ -133,6 +138,9 @@ def auth_callback():
 
 def _auth_result_page(message, ok):
     color = "#33cc66" if ok else "#ff3366"
+    # message may include attacker-controllable values (the Spotify `error`
+    # query param, exception text), so escape it before embedding in HTML.
+    message = html.escape(message)
     return f"""<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>em tee vee</title>
@@ -178,6 +186,11 @@ def api_match():
 
 @app.route("/videos/<path:filename>")
 def serve_video(filename):
+    # Only ever serve the media files themselves. The download directory also
+    # holds the song catalog, profiles, and per-profile Spotify tokens, and this
+    # route must never expose those. Reject any subpath or non-video extension.
+    if "/" in filename or "\\" in filename or not filename.lower().endswith(VIDEO_EXTS):
+        abort(404)
     return send_from_directory(config.DOWNLOAD_DIR, filename)
 
 
@@ -251,4 +264,8 @@ def _run_sync(profile_ids, limit=None):
 
 if __name__ == "__main__":
     os.makedirs(config.DOWNLOAD_DIR, exist_ok=True)
-    app.run(host="0.0.0.0", port=config.PORT, debug=True)
+    # Debug is opt-in: the Werkzeug debugger allows remote code execution, and
+    # this server binds all interfaces. threaded=True lets video streams and API
+    # calls be served concurrently instead of blocking one another.
+    debug = os.environ.get("MTV_DEBUG", "").lower() in ("1", "true", "yes")
+    app.run(host="0.0.0.0", port=config.PORT, debug=debug, threaded=True)
